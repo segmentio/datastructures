@@ -14,12 +14,36 @@
 // The linked list implementation in this package adopts a different approach to
 // enable programs to use lists without the hassle of managing an indirection
 // layer. Values inserted in the list must be struct types which contain a field
-// of type list.Node, that the list uses to link the values together without
-// requiring an extra object.
+// of type Node, that the list uses to link the values together without requiring
+// an extra object.
 //
-// The list.List type also implements a type-checking mechanism to guarantee that
-// all values inserted in the list are of the same type. Programs that attempt
-// to insert values of different types in the list will receive panics.
+// The List type also implements a type-checking mechanism to guarantee that all
+// values inserted in the list are of the same type. Programs that attempt to
+// insert values of different types in the list will receive panics.
+//
+// To use the list, a program must first declare the type of values it will push
+// in:
+//
+//	type Object struct {
+//		Data string
+//		_    list.Node
+//	}
+//
+// Lists can be constructed by simple declaration since their zero-value
+// represents an empty list, then then program can start inserting values.
+// Lists detect and retain the type of the first inserted value, then apply
+// type checking on all other inserts.
+//
+//	l := list.List{}
+//	l.PushBack(&Object{Data: "A"})
+//	l.PushBack(&Object{Data: "B"})
+//	l.PushBack(&Object{Data: "C"})
+//
+//	for x := l.Front(); x != nil; x = l.Next(x) {
+//		e := x.(*Object)
+//		...
+//	}
+//
 package list
 
 import (
@@ -30,7 +54,7 @@ import (
 // Node values must be embedded as a struct field in the values inserted in a
 // list.
 //
-// Typically, an unnamed field would be used to embed the list.Node value:
+// Typically, an unnamed field would be used to embed the Node value:
 //
 //	type Person struct {
 //		FirstName string
@@ -40,10 +64,10 @@ import (
 //		_ list.Node
 //	}
 //
-// Note that the list.Node field does not have to be at a specific position in
-// the struct, and may also be part of an embedded struct field.
+// Note that the Node field does not have to be at a specific position in the
+// struct, and may also be part of an embedded struct field.
 // In this example, the type T can be inserted in a list because its embedded
-// value of type S which has a list.Node field:
+// value of type S which has a Node field:
 //
 //	type S struct {
 //		Name string
@@ -55,8 +79,8 @@ import (
 //		S
 //	}
 //
-// If multiple fields of type list.Node are declared in the struct, the first
-// one is always used and the other ones are ignored.
+// If multiple fields of type Node are declared in the struct, the first one is
+// always used and the other ones are ignored.
 type Node struct{ prev, next *Node }
 
 // List values are containers of objects which support insertion and removal at
@@ -64,7 +88,9 @@ type Node struct{ prev, next *Node }
 // position in O(1).
 //
 // The values inserted in the list must be passed as pointers to struct values
-// of types that contain a list.Node field.
+// of types that contain a Node field.
+//
+// The zero-value is a valid, empty, and untyped list.
 type List struct {
 	typ  _type
 	head *Node
