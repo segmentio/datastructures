@@ -1,4 +1,4 @@
-// The list package contains the implementation of a type-safe intrusive
+// Package list contains the implementation of a type-safe, intrusive,
 // doubly-linked list.
 //
 // The standard library provides an implementation of a non-intrusive
