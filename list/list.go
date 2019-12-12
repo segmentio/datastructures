@@ -243,6 +243,12 @@ func (list *List) Remove(elem interface{}) {
 	}
 }
 
+// Removeall removes all elements from the list. The operation runs in constant
+// time.
+func (list *List) RemoveAll() {
+	list.reset()
+}
+
 func (list *List) pushFront(node *Node) {
 	if list.head == nil {
 		list.tail = node
@@ -265,9 +271,7 @@ func (list *List) pushFrontList(other *List) {
 		list.head = other.head
 		list.size += other.size
 	}
-	other.head = nil
-	other.tail = nil
-	other.size = 0
+	other.reset()
 }
 
 func (list *List) pushBack(node *Node) {
@@ -292,9 +296,7 @@ func (list *List) pushBackList(other *List) {
 		list.tail = other.tail
 		list.size += other.size
 	}
-	other.head = nil
-	other.tail = nil
-	other.size = 0
+	other.reset()
 }
 
 func (list *List) moveToFront(node *Node) {
@@ -349,6 +351,12 @@ func (list *List) remove(node *Node) {
 
 		list.size--
 	}
+}
+
+func (list *List) reset() {
+	list.head = nil
+	list.tail = nil
+	list.size = 0
 }
 
 func (list *List) nodeOf(elem interface{}) *Node {
