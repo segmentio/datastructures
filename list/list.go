@@ -17,7 +17,7 @@
 // of type list.Node, that the list uses to link the values together without
 // requiring an extra object.
 //
-// The list.List type also implements a type-checking mechanism to garantee that
+// The list.List type also implements a type-checking mechanism to guarantee that
 // all values inserted in the list are of the same type. Programs that attempt
 // to insert values of different types in the list will receive panics.
 package list
