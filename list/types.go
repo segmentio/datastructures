@@ -46,7 +46,7 @@ func (t *_type) valueOf(node *Node) interface{} {
 func typeOf(rt reflect.Type) _type {
 	t, ok := makeType(rt.Elem())
 	if !ok {
-		panic(fmt.Errorf("%s: type contains no list.Node field and therefore cannot be used as element in an intrusive list", rt))
+		panic(fmt.Errorf("%s: type contains no exported list.Node field and therefore cannot be used as element in an intrusive list", rt))
 	}
 	t.vtype = rt.Elem()
 	t.ptype = rt
@@ -59,7 +59,7 @@ func makeType(rt reflect.Type) (_type, bool) {
 	for i := 0; i < n; i++ {
 		f := rt.Field(i)
 
-		if f.PkgPath != "" { // unexported
+		if f.PkgPath != "" && f.Name != "_" { // unexported
 			continue
 		}
 

@@ -8,7 +8,7 @@ import (
 )
 
 type Int struct {
-	Node
+	_     Node
 	Value int
 }
 
