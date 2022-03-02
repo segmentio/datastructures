@@ -25,6 +25,10 @@ type Interface[K comparable, V any] interface {
 
 	// Evicts an item from the cache.
 	Evict() (key K, value V, evicted bool)
+
+	// Calls f for each entry in the cache. The order in which entries are
+	// presented is unspecified. If f returns false, iteration stops.
+	Range(f func(K, V) bool)
 }
 
 // Stats contains counters tracking usage of a cache.
@@ -109,6 +113,12 @@ func (c *Cache[K, V]) Evict() (key K, value V, evicted bool) {
 		}
 	}
 	return key, value, evicted
+}
+
+func (c *Cache[K, V]) Range(f func(K, V) bool) {
+	if c.backend != nil {
+		c.backend.Range(f)
+	}
 }
 
 func (c *Cache[K, V]) Stats() Stats {

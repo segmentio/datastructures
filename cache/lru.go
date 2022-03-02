@@ -59,3 +59,11 @@ func (lru *LRU[K, V]) Evict() (key K, value V, evicted bool) {
 	}
 	return key, value, evicted
 }
+
+func (lru *LRU[K, V]) Range(f func(K, V) bool) {
+	for _, e := range lru.index {
+		if !f(e.Value.key, e.Value.value) {
+			break
+		}
+	}
+}

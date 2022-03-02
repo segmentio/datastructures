@@ -142,4 +142,19 @@ func assertCacheLookup(t *testing.T, cache Interface[int, int], key, value int, 
 	if value != v {
 		t.Errorf("wrong value returned by cache lookup: got=%v want=%v", value, v)
 	}
+	keyFoundInRange, valueFoundInRange := false, false
+	cache.Range(func(k, v int) bool {
+		if k == key {
+			keyFoundInRange = true
+			valueFoundInRange = v == value
+			return false
+		}
+		return true
+	})
+	if !keyFoundInRange {
+		t.Errorf("the key was not found when ranging over cache entries: %v", key)
+	}
+	if !valueFoundInRange {
+		t.Errorf("the value was not found when ranging over cache entries: %v", value)
+	}
 }
