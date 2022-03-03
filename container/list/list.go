@@ -230,3 +230,21 @@ func (l *List[T]) PushFrontList(other *List[T]) {
 		l.insertValue(e.Value, &l.root)
 	}
 }
+
+// PushFrontElement inserts elem at the front of list l.
+func (l *List[T]) PushFrontElement(elem *Element[T]) {
+	if elem.list != nil {
+		panic("cannot push element that is already part of a list")
+	}
+	l.lazyInit()
+	l.insert(elem, &l.root)
+}
+
+// PushBackElement inserts elem at the back of list l.
+func (l *List[T]) PushBackElement(elem *Element[T]) {
+	if elem.list != nil {
+		panic("cannot push element that is already part of a list")
+	}
+	l.lazyInit()
+	l.insert(elem, l.root.prev)
+}

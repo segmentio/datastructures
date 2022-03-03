@@ -193,6 +193,24 @@ func testMapInsertAndDelete(t *testing.T, m *Map[int32, int64]) {
 			}
 		}
 
+		// Re-insert all the deleted keys and expect the find all afterwards.
+		for k, v := range keys {
+			if (v % 2) == 0 {
+				m.Insert(k, v)
+			}
+		}
+
+		for k, v := range keys {
+			value, found := m.Lookup(k)
+			if !found {
+				t.Errorf("key not found in map: %d", k)
+				return false
+			} else if value != v {
+				t.Errorf("wrong value returned for key=%d: got=%d want=%d", k, value, v)
+				return false
+			}
+		}
+
 		return true
 	}
 	quick.Check(f, nil)
@@ -400,13 +418,13 @@ func testMapSearchNotExist(t *testing.T, m *Map[int32, int64]) {
 	quick.Check(f, nil)
 }
 
-func (r *Map[K, V]) checkInvariants() {
-	if r.root.color != B {
+func (m *Map[K, V]) checkInvariants() {
+	if m.root.color != B {
 		panic("root must be black")
 	}
 	ys := make([]int, 0)
 	xs := &ys
-	r.check(r.root, 0, xs)
+	m.check(m.root, 0, xs)
 	i := 1
 	for i < len(*xs) {
 		if (*xs)[i-1] != (*xs)[i] {
@@ -417,14 +435,14 @@ func (r *Map[K, V]) checkInvariants() {
 	}
 }
 
-func (r *Map[K, V]) check(n *node[K, V], bh int, xs *[]int) {
-	if n == r.leaf {
+func (m *Map[K, V]) check(n *node[K, V], bh int, xs *[]int) {
+	if n == &m.leaf {
 		*xs = append(*xs, bh)
 		return
 	}
 	if n.color == R {
 		if !colors(n, n.a, n.b, R, B, B) {
-			r.preorder(r.root, "")
+			m.preorder(m.root, "")
 			fmt.Println(n, n.a, n.b)
 			panic("red node without both children black")
 		}
@@ -432,15 +450,15 @@ func (r *Map[K, V]) check(n *node[K, V], bh int, xs *[]int) {
 	if n.color == B {
 		bh += 1
 	}
-	r.check(n.a, bh, xs)
-	r.check(n.b, bh, xs)
+	m.check(n.a, bh, xs)
+	m.check(n.b, bh, xs)
 }
 
-func (r *Map[K, V]) preorder(n *node[K, V], tab string) {
-	if n != r.leaf {
+func (m *Map[K, V]) preorder(n *node[K, V], tab string) {
+	if n != &m.leaf {
 		fmt.Println(tab, n.key, "=>", n.value, n.color)
-		r.preorder(n.a, ":"+tab)
-		r.preorder(n.b, ":"+tab)
+		m.preorder(n.a, ":"+tab)
+		m.preorder(n.b, ":"+tab)
 	}
 }
 
