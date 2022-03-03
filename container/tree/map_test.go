@@ -2,6 +2,7 @@ package tree
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"testing"
 	"testing/quick"
@@ -53,6 +54,11 @@ func TestMap(t *testing.T) {
 			scenario: "searching for a non-existing key returns the value associated to the highest key that is lower or equal",
 			function: testMapSearchNotExist,
 		},
+
+		{
+			scenario: "searching for a range of entries greater or equal to a given key",
+			function: testMapSearchAndRange,
+		},
 	}
 
 	for _, test := range tests {
@@ -100,7 +106,9 @@ func testMapInsertAndLookup(t *testing.T, m *Map[int32, int64]) {
 
 		return true
 	}
-	quick.Check(f, nil)
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
+	}
 }
 
 func testMapInsertAndReplace(t *testing.T, m *Map[int32, int64]) {
@@ -145,7 +153,9 @@ func testMapInsertAndReplace(t *testing.T, m *Map[int32, int64]) {
 
 		return true
 	}
-	quick.Check(f, nil)
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
+	}
 }
 
 func testMapInsertAndDelete(t *testing.T, m *Map[int32, int64]) {
@@ -213,7 +223,9 @@ func testMapInsertAndDelete(t *testing.T, m *Map[int32, int64]) {
 
 		return true
 	}
-	quick.Check(f, nil)
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
+	}
 }
 
 func testMapDeleteNotExist(t *testing.T, m *Map[int32, int64]) {
@@ -265,7 +277,9 @@ func testMapDeleteNotExist(t *testing.T, m *Map[int32, int64]) {
 
 		return true
 	}
-	quick.Check(f, nil)
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
+	}
 }
 
 func testMapRange(t *testing.T, m *Map[int32, int64]) {
@@ -297,7 +311,7 @@ func testMapRange(t *testing.T, m *Map[int32, int64]) {
 		sort.Slice(entries, func(i, j int) bool { return entries[i].k < entries[j].k })
 
 		i := 0
-		m.Range(func(k int32, v int64) bool {
+		m.Range(math.MinInt32, func(k int32, v int64) bool {
 			if k != entries[i].k {
 				t.Errorf("wrong key for entry at index %d: got=%d want=%d", i, k, entries[i].k)
 				return false
@@ -317,7 +331,9 @@ func testMapRange(t *testing.T, m *Map[int32, int64]) {
 		}
 		return true
 	}
-	quick.Check(f, nil)
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
+	}
 }
 
 func testMapSearchExist(t *testing.T, m *Map[int32, int64]) {
@@ -353,7 +369,9 @@ func testMapSearchExist(t *testing.T, m *Map[int32, int64]) {
 
 		return true
 	}
-	quick.Check(f, nil)
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
+	}
 }
 
 func testMapSearchNotExist(t *testing.T, m *Map[int32, int64]) {
@@ -415,7 +433,81 @@ func testMapSearchNotExist(t *testing.T, m *Map[int32, int64]) {
 
 		return true
 	}
-	quick.Check(f, nil)
+
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
+	}
+}
+
+func testMapSearchAndRange(t *testing.T, m *Map[int32, int64]) {
+	f := func(keys map[int32]int64) bool {
+		m.Init(compare.Function[int32])
+
+		limit := len(keys) / 2
+		exist := make(map[int32]int64, limit)
+		dontExist := make(map[int32]int64, limit)
+
+		for k, v := range keys {
+			exist[k] = v
+			if len(exist) < limit {
+				exist[k] = v
+			} else {
+				dontExist[k] = v
+			}
+		}
+
+		for k, v := range exist {
+			previous, replaced := m.Insert(k, v)
+			if replaced {
+				t.Errorf("replaced key=%d with value=%d which did not exist in the map", k, previous)
+				return false
+			}
+		}
+
+		if n := m.Len(); n != len(exist) {
+			t.Errorf("wrong number of entries in map: got=%d want=%d", n, len(exist))
+			return false
+		}
+
+		search := func(k int32) (int32, int64, bool) {
+			if len(exist) == 0 {
+				return 0, 0, false
+			}
+			key, value, found := int32(0), int64(0), false
+			for existKey, existValue := range exist {
+				if existKey <= k && (!found || existKey > key) {
+					key, value, found = existKey, existValue, true
+				}
+			}
+			return key, value, found
+		}
+
+		for k := range dontExist {
+			key, value, found := m.Search(k)
+			if found {
+				m.Range(key, func(matchKey int32, matchValue int64) bool {
+					key, value = matchKey, matchValue
+					return false
+				})
+			}
+			expectKey, expectValue, expectFound := search(k)
+			if found != expectFound {
+				t.Errorf("key search mismatch: key=%d got=%t want=%t", k, found, expectFound)
+				return false
+			} else if key != expectKey {
+				t.Errorf("wrong key returned: got=%d want=%d", key, expectKey)
+				return false
+			} else if value != expectValue {
+				t.Errorf("wrong value returned for key=%d: got=%d want=%d", k, value, expectValue)
+				return false
+			}
+		}
+
+		return true
+	}
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
+	}
 }
 
 func (m *Map[K, V]) checkInvariants() {

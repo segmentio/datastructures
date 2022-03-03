@@ -28,8 +28,8 @@ func (t *Tree[E]) Len() int { return t.impl.Len() }
 // comprison function. If f returns false, the iteration is stopped.
 //
 // Complexity: O(n)
-func (t *Tree[E]) Range(f func(E) bool) {
-	t.impl.Range(func(elem E, _ struct{}) bool { return f(elem) })
+func (t *Tree[E]) Range(min E, f func(E) bool) {
+	t.impl.Range(min, func(elem E, _ struct{}) bool { return f(elem) })
 }
 
 // Insert inserts a new element in the tree. The method panics if the tree

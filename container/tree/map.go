@@ -93,18 +93,33 @@ func (m *Map[K, V]) Init(cmp func(K, K) int) {
 // Complexity: O(1)
 func (m *Map[K, V]) Len() int { return m.len }
 
-// Range calls f for each entry of the map. The keys and values are presented in
+// Range calls f for each entry of the map for each key greater or equal to the
+// min key passed as first argument. The keys and values are presented in
 // ascending order according to the comparison function installed on the map.
 //
-// Complexity: O(n)
-func (m *Map[K, V]) Range(f func(K, V) bool) {
+// Complexity: O(log n) + O(k) with k being the number of calls to f
+func (m *Map[K, V]) Range(min K, f func(K, V) bool) {
 	if m.root != nil {
-		m.subrange(m.root, f)
+		m.findAndRange(m.root, min, f)
 	}
 }
 
-func (m *Map[K, V]) subrange(n *node[K, V], call func(K, V) bool) bool {
-	return n == &m.leaf || (m.subrange(n.a, call) && call(n.key, n.value) && m.subrange(n.b, call))
+func (m *Map[K, V]) findAndRange(n *node[K, V], key K, f func(K, V) bool) bool {
+	if n == &m.leaf {
+		return true
+	}
+	switch cmp := m.cmp(key, n.key); {
+	case cmp < 0:
+		return m.findAndRange(n.a, key, f) && f(n.key, n.value) && m.rangeFrom(n.b, f)
+	case cmp > 0:
+		return m.findAndRange(n.b, key, f)
+	default:
+		return f(n.key, n.value) && m.rangeFrom(n.b, f)
+	}
+}
+
+func (m *Map[K, V]) rangeFrom(n *node[K, V], call func(K, V) bool) bool {
+	return n == &m.leaf || (m.rangeFrom(n.a, call) && call(n.key, n.value) && m.rangeFrom(n.b, call))
 }
 
 // Insert inserts a new entry in the map, or replaces the value if the key
@@ -216,7 +231,7 @@ func (m *Map[K, V]) Search(key K) (matchKey K, matchValue V, found bool) {
 			return r.key, r.value, true
 		}
 	}
-	return matchKey, matchValue, false
+	return matchKey, matchValue, found
 }
 
 // Delete deletes the given key from the map. If the key does not exist,
