@@ -135,6 +135,7 @@ func testCacheInsertAndReplace(t *testing.T, cache Interface[int, int]) {
 }
 
 func assertCacheLookup(t *testing.T, cache Interface[int, int], key, value int, ok bool) {
+	t.Helper()
 	v, found := cache.Lookup(key)
 	if found != ok {
 		t.Errorf("wrong result to cache lookup: got=%t want=%t", found, ok)
@@ -151,10 +152,10 @@ func assertCacheLookup(t *testing.T, cache Interface[int, int], key, value int, 
 		}
 		return true
 	})
-	if !keyFoundInRange {
+	if keyFoundInRange != ok {
 		t.Errorf("the key was not found when ranging over cache entries: %v", key)
 	}
-	if !valueFoundInRange {
+	if valueFoundInRange != ok {
 		t.Errorf("the value was not found when ranging over cache entries: %v", value)
 	}
 }
