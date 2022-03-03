@@ -96,7 +96,7 @@ func (m *Map[K, V]) Len() int { return m.len }
 // Range calls f for each entry of the map. The keys and values are presented in
 // ascending order according to the comparison function installed on the map.
 //
-// Complexity: O(N)
+// Complexity: O(n)
 func (m *Map[K, V]) Range(f func(K, V) bool) {
 	if m.root != nil {
 		m.subrange(m.root, f)
