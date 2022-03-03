@@ -419,7 +419,7 @@ func testMapSearchNotExist(t *testing.T, m *Map[int32, int64]) {
 }
 
 func (m *Map[K, V]) checkInvariants() {
-	if m.root.color != B {
+	if m.root.color != black {
 		panic("root must be black")
 	}
 	ys := make([]int, 0)
@@ -440,14 +440,14 @@ func (m *Map[K, V]) check(n *node[K, V], bh int, xs *[]int) {
 		*xs = append(*xs, bh)
 		return
 	}
-	if n.color == R {
-		if !colors(n, n.a, n.b, R, B, B) {
+	if n.color == red {
+		if !colors(n, n.a, n.b, red, black, black) {
 			m.preorder(m.root, "")
 			fmt.Println(n, n.a, n.b)
 			panic("red node without both children black")
 		}
 	}
-	if n.color == B {
+	if n.color == black {
 		bh += 1
 	}
 	m.check(n.a, bh, xs)

@@ -47,10 +47,10 @@ type Map[K, V any] struct {
 type color byte
 
 const (
-	R  color = 0
-	B  color = 1
-	BB color = 2
-	NB color = 3
+	red    color = 0
+	black  color = 1
+	bblack color = 2
+	nblack color = 3
 )
 
 type node[K, V any] struct {
@@ -77,10 +77,10 @@ func NewMap[K, V any](cmp func(K, K) int) *Map[K, V] {
 //
 // Complexity: O(1)
 func (m *Map[K, V]) Init(cmp func(K, K) int) {
-	m.leaf = node[K, V]{color: B}
+	m.leaf = node[K, V]{color: black}
 	m.leaf.a = &m.leaf
 	m.leaf.b = &m.leaf
-	m.bbleaf = node[K, V]{color: BB}
+	m.bbleaf = node[K, V]{color: bblack}
 	m.bbleaf.a = &m.leaf
 	m.bbleaf.b = &m.leaf
 	m.cmp = cmp
@@ -132,7 +132,7 @@ func (m *Map[K, V]) insert(n *node[K, V], key K, value V) (inserted *node[K, V],
 			b:     &m.leaf,
 			key:   key,
 			value: value,
-			color: R,
+			color: red,
 		}
 	} else {
 		switch cmp := m.cmp(key, n.key); {
@@ -258,18 +258,18 @@ func (m *Map[K, V]) remove(n *node[K, V]) *node[K, V] {
 	if n == &m.leaf {
 		return &m.leaf
 	}
-	if n.color == R && n.a == &m.leaf && n.b == &m.leaf {
+	if n.color == red && n.a == &m.leaf && n.b == &m.leaf {
 		return &m.leaf
 	}
-	if n.color == B && n.a == &m.leaf && n.b == &m.leaf {
+	if n.color == black && n.a == &m.leaf && n.b == &m.leaf {
 		return &m.bbleaf
 	}
-	if n.color == B && n.a == &m.leaf && n.b != &m.leaf && n.b.color == R {
-		n.b.color = B
+	if n.color == black && n.a == &m.leaf && n.b != &m.leaf && n.b.color == red {
+		n.b.color = black
 		return n.b
 	}
-	if n.color == B && n.b == &m.leaf && n.a != &m.leaf && n.a.color == R {
-		n.a.color = B
+	if n.color == black && n.b == &m.leaf && n.a != &m.leaf && n.a.color == red {
+		n.a.color = black
 		return n.a
 	}
 	// chasing same pointers twice. can optimize by
@@ -290,7 +290,7 @@ func (m *Map[K, V]) removeMax(n *node[K, V]) *node[K, V] {
 }
 
 func (m *Map[K, V]) bubble(n *node[K, V]) *node[K, V] {
-	if n.a.color == BB || n.b.color == BB {
+	if n.a.color == bblack || n.b.color == bblack {
 		n.color = blacker(n.color)
 		n.a = m.redder(n.a)
 		n.b = m.redder(n.b)
@@ -308,12 +308,12 @@ func (m *Map[K, V]) redder(n *node[K, V]) *node[K, V] {
 }
 
 func blacken[K, V any](n *node[K, V]) *node[K, V] {
-	n.color = B
+	n.color = black
 	return n
 }
 
 func redden[K, V any](n *node[K, V]) *node[K, V] {
-	n.color = R
+	n.color = red
 	return n
 }
 
@@ -340,19 +340,19 @@ func balance[K, V any](n *node[K, V]) *node[K, V] {
 	var a, b, c, d *node[K, V]
 	okasakiCase := false
 	switch {
-	case colors(n, n.a, n.a.a, B, R, R):
+	case colors(n, n.a, n.a.a, black, red, red):
 		x, y, z = n.a.a, n.a, n
 		a, b, c, d = x.a, x.b, y.b, z.b
 		okasakiCase = true
-	case colors(n, n.a, n.a.b, B, R, R):
+	case colors(n, n.a, n.a.b, black, red, red):
 		x, y, z = n.a, n.a.b, n
 		a, b, c, d = x.a, y.a, y.b, z.b
 		okasakiCase = true
-	case colors(n, n.b, n.b.a, B, R, R):
+	case colors(n, n.b, n.b.a, black, red, red):
 		x, y, z = n, n.b.a, n.b
 		a, b, c, d = x.a, y.a, y.b, z.b
 		okasakiCase = true
-	case colors(n, n.b, n.b.b, B, R, R):
+	case colors(n, n.b, n.b.b, black, red, red):
 		x, y, z = n, n.b, n.b.b
 		a, b, c, d = x.a, y.a, z.a, z.b
 		okasakiCase = true
@@ -360,24 +360,24 @@ func balance[K, V any](n *node[K, V]) *node[K, V] {
 	if okasakiCase {
 		x.a, x.b, z.a, z.b = a, b, c, d
 		y.a, y.b = x, z
-		x.color, y.color, z.color = B, R, B
+		x.color, y.color, z.color = black, red, black
 		return y
 	}
 	mightCase := false
 	switch {
-	case colors(n, n.a, n.a.a, BB, R, R):
+	case colors(n, n.a, n.a.a, bblack, red, red):
 		x, y, z = n.a.a, n.a, n
 		a, b, c, d = x.a, x.b, y.b, z.b
 		mightCase = true
-	case colors(n, n.a, n.a.b, BB, R, R):
+	case colors(n, n.a, n.a.b, bblack, red, red):
 		x, y, z = n.a, n.a.b, n
 		a, b, c, d = x.a, y.a, y.b, z.b
 		mightCase = true
-	case colors(n, n.b, n.b.a, BB, R, R):
+	case colors(n, n.b, n.b.a, bblack, red, red):
 		x, y, z = n, n.b.a, n.b
 		a, b, c, d = x.a, y.a, y.b, z.b
 		mightCase = true
-	case colors(n, n.b, n.b.b, BB, R, R):
+	case colors(n, n.b, n.b.b, bblack, red, red):
 		x, y, z = n, n.b, n.b.b
 		a, b, c, d = x.a, y.a, z.a, z.b
 		mightCase = true
@@ -394,14 +394,14 @@ func balance[K, V any](n *node[K, V]) *node[K, V] {
 	if mightCase {
 		x.a, x.b, z.a, z.b = a, b, c, d
 		y.a, y.b = x, z
-		x.color, y.color, z.color = B, B, B
+		x.color, y.color, z.color = black, black, black
 		return y
 	}
 	return n
 }
 
 func deleteCase1[K, V any](n *node[K, V]) (*node[K, V], bool) {
-	cond := n.color == BB && n.b.color == NB && n.b.a.color == B && n.b.b.color == B
+	cond := n.color == bblack && n.b.color == nblack && n.b.a.color == black && n.b.b.color == black
 	if !cond {
 		return n, false
 	}
@@ -409,14 +409,14 @@ func deleteCase1[K, V any](n *node[K, V]) (*node[K, V], bool) {
 	a, b, c, d := x.a, y.a, y.b, z.b
 	x.a, x.b = a, b
 	z.a, z.b = c, redden(d)
-	z.color = B
+	z.color = black
 	y.a, y.b = x, balance(z)
-	x.color, y.color, z.color = B, B, B
+	x.color, y.color, z.color = black, black, black
 	return y, true
 }
 
 func deleteCase2[K, V any](n *node[K, V]) (*node[K, V], bool) {
-	cond := n.color == BB && n.a.color == NB && n.a.a.color == B && n.a.b.color == B
+	cond := n.color == bblack && n.a.color == nblack && n.a.a.color == black && n.a.b.color == black
 	if !cond {
 		return n, false
 	}
@@ -424,34 +424,34 @@ func deleteCase2[K, V any](n *node[K, V]) (*node[K, V], bool) {
 	a, b, c, d := x.a, y.a, y.b, z.b
 	x.a, x.b = redden(a), b
 	z.a, z.b = c, d
-	x.color = B
+	x.color = black
 	y.a, y.b = balance(x), z
-	x.color, y.color, z.color = B, B, B
+	x.color, y.color, z.color = black, black, black
 	return y, true
 }
 
 func redder(c color) color {
 	switch c {
-	case R:
-		return NB
-	case B:
-		return R
-	case BB:
-		return B
-	default: // NB
-		panic("NB cannot be reddened further")
+	case red:
+		return nblack
+	case black:
+		return red
+	case bblack:
+		return black
+	default: // nblack
+		panic("cannot be reddened further")
 	}
 }
 
 func blacker(c color) color {
 	switch c {
-	case NB:
-		return R
-	case R:
-		return B
-	case B:
-		return BB
-	default: // BB
-		panic("BB cannot be blackened further")
+	case nblack:
+		return red
+	case red:
+		return black
+	case black:
+		return bblack
+	default: // bblack
+		panic("cannot be blackened further")
 	}
 }
