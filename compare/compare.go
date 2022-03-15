@@ -3,7 +3,7 @@ package compare
 // Ordered is a type constraint enumerating primitive types that support the
 // "<" and ">" operators.
 type Ordered interface {
-	~int8 | ~int16 | ~int32 | ~int64 | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~float32 | ~float64 | ~string
+	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uintptr | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~float32 | ~float64 | ~string
 }
 
 // Function is a comparison function for ordered types.
