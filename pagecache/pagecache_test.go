@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"io"
 	"math/rand"
-	"os"
+	"sync"
 	"testing"
 	"testing/iotest"
 
@@ -12,7 +12,7 @@ import (
 )
 
 func TestPageCache(t *testing.T) {
-	const size = 20e6 // ~20MB
+	const size = 2e6 // ~2MB
 	r := rand.New(rand.NewSource(3))
 	b := new(bytes.Buffer)
 	b.Grow(size)
@@ -22,24 +22,25 @@ func TestPageCache(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	f, err := os.CreateTemp("", "cache.*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
-
-	if _, err := f.Write(b.Bytes()); err != nil {
-		t.Fatal(err)
-	}
-
 	cache := pagecache.New(
-		pagecache.PageSize(8192),
+		pagecache.PageSize(512),
 		pagecache.PageCount(1024),
 	)
 
-	cachedFile := cache.NewFile(1, f, size)
+	wg := sync.WaitGroup{}
+	data := b.Bytes()
 
-	if err := iotest.TestReader(io.NewSectionReader(cachedFile, 0, size), b.Bytes()); err != nil {
-		t.Error(err)
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			cachedFile := cache.NewFile(1, bytes.NewReader(data), size)
+
+			if err := iotest.TestReader(io.NewSectionReader(cachedFile, 0, size), data); err != nil {
+				t.Error(err)
+			}
+		}()
 	}
+
+	wg.Wait()
 }
