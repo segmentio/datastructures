@@ -27,19 +27,19 @@ const (
 const (
 	// The number of buckets in a Cache instance.
 	//
-	// At this time, this is a constant value, tho it may be interesting to
-	// make it configurable in the future. Having this value be a constant and
-	// a power of two allows the compiler to optimize modulo operations using
-	// bit masks, which are instructions that tend to be orders of magnitude
-	// faster. If we make this value configurable, we might want to ensure that
-	// we retain the same performance characteristics, which would require to
-	// only allow powers of two as bucket counts, and implement the bitwise
-	// optimizations in the code.
+	// At this time, numBuckets is a constant value, though it may be
+	// interesting to make it configurable in the future. Having this value be
+	// a constant and a power of two allows the compiler to optimize modulo
+	// operations using bit masks, which are instructions that tend to be orders
+	// of magnitude faster. If we make this value configurable, we might want to
+	// ensure that we retain the same performance characteristics, which would
+	// require us to only allow powers of two as bucket counts, and implement
+	// the bitwise optimizations in the code.
 	numBuckets = 64
 )
 
 var (
-	// ErrNoPageps is returned when memory prossure is too high and it is not
+	// ErrNoPages is returned when memory pressure is too high and it is not
 	// possible to read files through the page cache.
 	ErrNoPages = errors.New("there are no free pages left in the cache")
 )
@@ -99,10 +99,10 @@ type Cache struct {
 	hashseed maphash.Seed
 	shift    uint
 	// The cache is divided into buckets, each bucket holding a section of the
-	// total page count. Synchronization of cache access, including evictions of
-	// outdated pages is managed at the bucket level. Having multiple buckets
-	// help scale cache access when running in multi-threaded programs where a
-	// single cache mutex could quickly become a bottleneck in the cache.
+	// total page count. Each bucket can synchronize cache access and evict
+	// outdated pages independently. Having multiple buckets helps scale cache
+	// access when running in multi-threaded programs where a single cache mutex
+	// could quickly become a bottleneck in the cache.
 	buckets [numBuckets]bucket
 }
 
@@ -134,7 +134,7 @@ func NewWithConfig(config *Config) *Cache {
 	pageSize = int64(1) << shift
 	cacheSize := pageSize * pageCount
 	bucketSize := cacheSize / numBuckets
-	// TODO: should be make the allocator configurable?
+	// TODO: should we make the allocator configurable?
 	data := make([]byte, cacheSize)
 
 	c := &Cache{
@@ -150,10 +150,10 @@ func NewWithConfig(config *Config) *Cache {
 	return c
 }
 
-// NewFile constructs a wrapper around the file of the given size. The integer
-// is a unique identifier intended to uniquely represent the file within the
-// cache. If multiple io.ReaderAt point to the same underlying file, they could
-// share the same id to reference the same pages in the cache.
+// NewFile constructs a wrapper around the file of the given size. id is a
+// unique identifier intended to uniquely represent the file within the cache.
+// If multiple io.ReaderAt interfaces point at the same underlying file, they
+// could share the same id to reference the same pages in the cache.
 func (c *Cache) NewFile(id uint32, file io.ReaderAt, size int64) io.ReaderAt {
 	return &cachedFile{
 		cache: c,
@@ -190,7 +190,7 @@ type Stats struct {
 	Frees     int64 // number of allocated pages returned to the free pool
 }
 
-// Stats returns the current values of cache statistic.
+// Stats returns the current values of cache statistics.
 func (c *Cache) Stats() (stats Stats) {
 	for i := range c.buckets {
 		b := &c.buckets[i]
