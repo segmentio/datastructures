@@ -98,6 +98,7 @@ func PageCount(count int64) Option {
 type Cache struct {
 	hashseed maphash.Seed
 	shift    uint
+	pages    []byte
 	// The cache is divided into buckets, each bucket holding a section of the
 	// total page count. Each bucket can synchronize cache access and evict
 	// outdated pages independently. Having multiple buckets helps scale cache
@@ -132,19 +133,24 @@ func NewWithConfig(config *Config) *Cache {
 
 	shift := uint(bits.Len64(uint64(pageSize - 1)))
 	pageSize = int64(1) << shift
-	cacheSize := pageSize * pageCount
-	bucketSize := cacheSize / numBuckets
-	// TODO: should we make the allocator configurable?
-	data := make([]byte, cacheSize)
 
 	c := &Cache{
 		hashseed: maphash.MakeSeed(),
 		shift:    shift,
+		// TODO: should we make the allocator configurable?
+		pages: make([]byte, pageSize*pageCount),
 	}
 
+	pages := make([]page, pageCount)
+	for i := range pages {
+		pages[i].offset = uint32(i)
+	}
+
+	bucketSize := len(pages) / len(c.buckets)
 	for i := range c.buckets {
-		b := &c.buckets[i]
-		b.init(data[int64(i)*bucketSize:int64(i+1)*bucketSize], pageSize)
+		off := (i + 0) * bucketSize
+		end := (i + 1) * bucketSize
+		c.buckets[i].pages = pages[off:end:end]
 	}
 
 	return c
@@ -175,6 +181,12 @@ func (c *Cache) bucketOf(key region) *bucket {
 	h.SetSeed(c.hashseed)
 	h.Write(b[:])
 	return &c.buckets[h.Sum64()%numBuckets]
+}
+
+func (c *Cache) bytes(page page) []byte {
+	offset := int64(page.offset) << c.shift
+	length := int64(1) << c.shift
+	return c.pages[offset : offset+length]
 }
 
 // Stats is a structure carrying statistics collected on cache access.
@@ -245,11 +257,12 @@ func (f *cachedFile) ReadAt(b []byte, off int64) (n int, err error) {
 		pageOffset := int64(key.offset) << shift
 		readOffset := off - pageOffset
 
-		if bucket := cache.bucketOf(key); !bucket.read(b[n:], key, shift, readOffset) {
-			page, data, ok := bucket.get(shift)
+		if bucket := cache.bucketOf(key); !bucket.read(b[n:], key, readOffset, cache) {
+			page, ok := bucket.get()
 			if !ok {
 				return n, ErrNoPages
 			}
+			data := cache.bytes(page)
 
 			rn, err := f.file.ReadAt(data, pageOffset)
 			if rn < len(data) && !errors.Is(err, io.EOF) {
@@ -260,7 +273,7 @@ func (f *cachedFile) ReadAt(b []byte, off int64) (n int, err error) {
 			}
 
 			copy(b[n:], data[readOffset:rn])
-			bucket.put(key, page, shift)
+			bucket.put(key, page)
 		}
 
 		readBytes := pageSize - readOffset
@@ -285,8 +298,7 @@ type page struct {
 type bucket struct {
 	mutex sync.Mutex
 	cache cache.LRU[region, page]
-	freed []page
-	pages []byte
+	pages []page
 	bucketStats
 }
 
@@ -299,60 +311,46 @@ type bucketStats struct {
 	frees     int64
 }
 
-func (b *bucket) init(data []byte, pageSize int64) {
-	b.pages = data
-	b.freed = make([]page, int64(len(data))/pageSize)
-	for i := range b.freed {
-		b.freed[i].offset = uint32(i)
-	}
-}
-
-func (b *bucket) bytes(page page, shift uint) []byte {
-	offset := int64(page.offset) << shift
-	length := int64(1) << shift
-	return b.pages[offset : offset+length]
-}
-
-func (b *bucket) read(data []byte, key region, shift uint, off int64) bool {
+func (b *bucket) read(data []byte, key region, off int64, cache *Cache) bool {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
 	page, ok := b.cache.Lookup(key)
 	if ok {
 		b.hits++
-		copy(data, b.bytes(page, shift)[off:])
+		copy(data, cache.bytes(page)[off:])
 	}
 	b.lookups++
 	return ok
 }
 
-func (b *bucket) get(shift uint) (page, []byte, bool) {
+func (b *bucket) get() (page, bool) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
-	if i := len(b.freed) - 1; i >= 0 {
-		page := b.freed[i]
-		b.freed = b.freed[:i]
+	if i := len(b.pages) - 1; i >= 0 {
+		page := b.pages[i]
+		b.pages = b.pages[:i]
 		b.allocs++
-		return page, b.bytes(page, shift), true
+		return page, true
 	}
 
 	_, page, evicted := b.cache.Evict()
 	if evicted {
 		b.evictions++
-		return page, b.bytes(page, shift), true
+		return page, true
 	}
 
-	return page, nil, false
+	return page, false
 }
 
-func (b *bucket) put(key region, page page, shift uint) {
+func (b *bucket) put(key region, page page) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
 	page, replaced := b.cache.Insert(key, page)
 	if replaced {
-		b.freed = append(b.freed, page)
+		b.pages = append(b.pages, page)
 		b.frees++
 	}
 

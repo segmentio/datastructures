@@ -60,8 +60,8 @@ func BenchmarkPageCacheWithEvictions(b *testing.B) {
 	// <2 MiB cache, some evictions will occur
 	benchmarkPageCache(b,
 		pagecache.New(
-			pagecache.PageSize(4096),
-			pagecache.PageCount(100),
+			pagecache.PageSize(2048),
+			pagecache.PageCount(512),
 		),
 	)
 }
