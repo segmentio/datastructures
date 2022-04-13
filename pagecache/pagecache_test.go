@@ -7,6 +7,7 @@ import (
 	"sync"
 	"testing"
 	"testing/iotest"
+	"time"
 
 	"github.com/segmentio/datastructures/v2/pagecache"
 )
@@ -43,4 +44,74 @@ func TestPageCache(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func BenchmarkPageCacheNoEvictions(b *testing.B) {
+	const size = 2e6 // ~2MB
+	prng := rand.New(rand.NewSource(3))
+	data := new(bytes.Buffer)
+	data.Grow(size)
+
+	_, err := io.CopyN(data, prng, size)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// 4 MiB cache, no evictions
+	cache := pagecache.New(
+		pagecache.PageSize(4096),
+		pagecache.PageCount(1024),
+	)
+
+	file := cache.NewFile(1, bytes.NewReader(data.Bytes()), size)
+
+	b.RunParallel(func(pb *testing.PB) {
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		b := make([]byte, 1000)
+		n := len(b) / 2
+
+		for pb.Next() {
+			offset := r.Int63n(size)
+			length := r.Intn(n) + n
+			file.ReadAt(b[:length], offset)
+		}
+	})
+
+	stats := cache.Stats()
+	b.Logf("hit rate: %.2f%%", 100*stats.HitRate())
+}
+
+func BenchmarkPageCacheWithEvictions(b *testing.B) {
+	const size = 2e6 // ~2MB
+	prng := rand.New(rand.NewSource(3))
+	data := new(bytes.Buffer)
+	data.Grow(size)
+
+	_, err := io.CopyN(data, prng, size)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// <2 MiB cache, some evictions will occur
+	cache := pagecache.New(
+		pagecache.PageSize(4096),
+		pagecache.PageCount(100),
+	)
+
+	file := cache.NewFile(1, bytes.NewReader(data.Bytes()), size)
+
+	b.RunParallel(func(pb *testing.PB) {
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		b := make([]byte, 1000)
+		n := len(b) / 2
+
+		for pb.Next() {
+			offset := r.Int63n(size)
+			length := r.Intn(n) + n
+			file.ReadAt(b[:length], offset)
+		}
+	})
+
+	stats := cache.Stats()
+	b.Logf("hit rate: %.2f%%", 100*stats.HitRate())
 }

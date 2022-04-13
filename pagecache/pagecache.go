@@ -190,6 +190,12 @@ type Stats struct {
 	Frees     int64 // number of allocated pages returned to the free pool
 }
 
+// HitRate returns the hit rate of cache lookups, as a floating point value
+// between 0 and 1 (inclusive).
+func (s *Stats) HitRate() float64 {
+	return float64(s.Hits) / float64(s.Lookups)
+}
+
 // Stats returns the current values of cache statistics.
 func (c *Cache) Stats() (stats Stats) {
 	for i := range c.buckets {
