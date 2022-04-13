@@ -47,41 +47,26 @@ func TestPageCache(t *testing.T) {
 }
 
 func BenchmarkPageCacheNoEvictions(b *testing.B) {
-	const size = 2e6 // ~2MB
-	prng := rand.New(rand.NewSource(3))
-	data := new(bytes.Buffer)
-	data.Grow(size)
-
-	_, err := io.CopyN(data, prng, size)
-	if err != nil {
-		b.Fatal(err)
-	}
-
 	// 4 MiB cache, no evictions
-	cache := pagecache.New(
-		pagecache.PageSize(4096),
-		pagecache.PageCount(1024),
+	benchmarkPageCache(b,
+		pagecache.New(
+			pagecache.PageSize(4096),
+			pagecache.PageCount(1024),
+		),
 	)
-
-	file := cache.NewFile(1, bytes.NewReader(data.Bytes()), size)
-
-	b.RunParallel(func(pb *testing.PB) {
-		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		b := make([]byte, 1000)
-		n := len(b) / 2
-
-		for pb.Next() {
-			offset := r.Int63n(size)
-			length := r.Intn(n) + n
-			file.ReadAt(b[:length], offset)
-		}
-	})
-
-	stats := cache.Stats()
-	b.Logf("hit rate: %.2f%%", 100*stats.HitRate())
 }
 
 func BenchmarkPageCacheWithEvictions(b *testing.B) {
+	// <2 MiB cache, some evictions will occur
+	benchmarkPageCache(b,
+		pagecache.New(
+			pagecache.PageSize(4096),
+			pagecache.PageCount(100),
+		),
+	)
+}
+
+func benchmarkPageCache(b *testing.B, cache *pagecache.Cache) {
 	const size = 2e6 // ~2MB
 	prng := rand.New(rand.NewSource(3))
 	data := new(bytes.Buffer)
@@ -92,17 +77,12 @@ func BenchmarkPageCacheWithEvictions(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	// <2 MiB cache, some evictions will occur
-	cache := pagecache.New(
-		pagecache.PageSize(4096),
-		pagecache.PageCount(100),
-	)
-
 	file := cache.NewFile(1, bytes.NewReader(data.Bytes()), size)
 
+	start := time.Now()
 	b.RunParallel(func(pb *testing.PB) {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		b := make([]byte, 1000)
+		b := make([]byte, 1024)
 		n := len(b) / 2
 
 		for pb.Next() {
@@ -112,6 +92,11 @@ func BenchmarkPageCacheWithEvictions(b *testing.B) {
 		}
 	})
 
-	stats := cache.Stats()
-	b.Logf("hit rate: %.2f%%", 100*stats.HitRate())
+	report(b, start, cache.Stats())
+}
+
+func report(b *testing.B, start time.Time, stats pagecache.Stats) {
+	qps := float64(stats.Lookups) / time.Since(start).Seconds()
+	b.ReportMetric(qps, "read/s")
+	b.ReportMetric(100*stats.HitRate(), "hits(%)")
 }

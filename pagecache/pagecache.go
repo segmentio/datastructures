@@ -35,7 +35,7 @@ const (
 	// ensure that we retain the same performance characteristics, which would
 	// require us to only allow powers of two as bucket counts, and implement
 	// the bitwise optimizations in the code.
-	numBuckets = 64
+	numBuckets = 512
 )
 
 var (
