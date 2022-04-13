@@ -7,6 +7,7 @@ import (
 	"sync"
 	"testing"
 	"testing/iotest"
+	"time"
 
 	"github.com/segmentio/datastructures/v2/pagecache"
 )
@@ -43,4 +44,59 @@ func TestPageCache(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func BenchmarkPageCacheNoEvictions(b *testing.B) {
+	// 4 MiB cache, no evictions
+	benchmarkPageCache(b,
+		pagecache.New(
+			pagecache.PageSize(4096),
+			pagecache.PageCount(1024),
+		),
+	)
+}
+
+func BenchmarkPageCacheWithEvictions(b *testing.B) {
+	// <2 MiB cache, some evictions will occur
+	benchmarkPageCache(b,
+		pagecache.New(
+			pagecache.PageSize(2048),
+			pagecache.PageCount(512),
+		),
+	)
+}
+
+func benchmarkPageCache(b *testing.B, cache *pagecache.Cache) {
+	const size = 2e6 // ~2MB
+	prng := rand.New(rand.NewSource(3))
+	data := new(bytes.Buffer)
+	data.Grow(size)
+
+	_, err := io.CopyN(data, prng, size)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	file := cache.NewFile(1, bytes.NewReader(data.Bytes()), size)
+
+	start := time.Now()
+	b.RunParallel(func(pb *testing.PB) {
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		b := make([]byte, 1024)
+		n := len(b) / 2
+
+		for pb.Next() {
+			offset := r.Int63n(size)
+			length := r.Intn(n) + n
+			file.ReadAt(b[:length], offset)
+		}
+	})
+
+	report(b, start, cache.Stats())
+}
+
+func report(b *testing.B, start time.Time, stats pagecache.Stats) {
+	qps := float64(stats.Lookups) / time.Since(start).Seconds()
+	b.ReportMetric(qps, "read/s")
+	b.ReportMetric(100*stats.HitRate(), "hits(%)")
 }
