@@ -35,6 +35,9 @@ const (
 	// ensure that we retain the same performance characteristics, which would
 	// require us to only allow powers of two as bucket counts, and implement
 	// the bitwise optimizations in the code.
+	//
+	// For details on how this value was decided see this pull request:
+	// https://github.com/segmentio/datastructures/pull/4
 	numBuckets = 512
 )
 
@@ -205,6 +208,9 @@ type Stats struct {
 // HitRate returns the hit rate of cache lookups, as a floating point value
 // between 0 and 1 (inclusive).
 func (s *Stats) HitRate() float64 {
+	if s.Lookups == 0 {
+		return 0
+	}
 	return float64(s.Hits) / float64(s.Lookups)
 }
 
