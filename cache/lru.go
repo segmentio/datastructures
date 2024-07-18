@@ -25,9 +25,11 @@ func (lru *LRU[K, V]) Insert(key K, value V) (previous V, replaced bool) {
 	e, ok := lru.index[key]
 	if ok {
 		previous, replaced = e.Value.value, true
-		lru.queue.Remove(e)
+		e.Value.value = value
+		lru.queue.MoveToFront(e)
+	} else {
+		lru.index[key] = lru.queue.PushFront(entry[K, V]{key: key, value: value})
 	}
-	lru.index[key] = lru.queue.PushFront(entry[K, V]{key: key, value: value})
 	return previous, replaced
 }
 
