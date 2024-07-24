@@ -10,14 +10,27 @@ type Array[T any] struct {
 
 // Push appends a value into the array.
 func (a *Array[T]) Push(v T) {
-	p, _ := a.Next()
+	a.PushWithPool(v, nil)
+}
+
+// PushWithPool appends a value into the array, pulling a block from the
+// provided pool when needed.
+func (a *Array[T]) PushWithPool(v T, pool *Pool[T]) {
+	p, _ := a.NextWithPool(pool)
 	*p = v
 }
 
 // PushPtr appends a value into the array by copying a value from an existing
 // memory address.
 func (a *Array[T]) PushPtr(v *T) {
-	p, _ := a.Next()
+	a.PushPtrWithPool(v, nil)
+}
+
+// PushPtrWithPool appends a value into the array by copying a value from an
+// existing memory address. If a new block needs to be allocated, it will
+// attempt reusing an existing one provided by the pool.
+func (a *Array[T]) PushPtrWithPool(v *T, pool *Pool[T]) {
+	p, _ := a.NextWithPool(pool)
 	*p = *v
 }
 
@@ -47,6 +60,8 @@ func (a *Array[T]) Pop() {
 	a.PopWithPool(nil)
 }
 
+// PopWithPool removes the last item from the array. If the popped value is the
+// last in a block, the block will be removed and returned to the pool.
 func (a *Array[T]) PopWithPool(pool *Pool[T]) {
 	i := len(a.blocks) - 1
 	a.blocks[i].pop()
@@ -64,6 +79,42 @@ func (a *Array[T]) PopWithPool(pool *Pool[T]) {
 			a.blocks = blocks
 		}
 	}
+}
+
+// ShiftBlocks removes `n` number of blocks (`n * BlockLen[T]()` entries) from
+// the beginning of the array, shifting the remaining blocks down. If `n` exceeds
+// the number of blocks in the array, none are removed and false is returned.
+func (a *Array[T]) ShiftBlocks(n int) bool {
+	return a.ShiftBlocksWithPool(n, nil)
+}
+
+// ShiftBlocksWithPool removes whole blocks from the array like ShiftBlocks. If
+// a pool is provided, the removed blocks will be given back to it.
+//
+// When using a pool, it is important to ensure any entries that contain heap
+// allocations are cleared. For example, the entire blocks may be cleared at once:
+//
+//	type Item { values []int }
+//	func removeBlocks(items array.Pool[Item], blocks int, pool *array.Pool[Item]) {
+//		n := array.BlockLen[Item] * blocks
+//		for i := 0; i < n; i++ {
+//			items.Ptr(i).values = nil
+//		}
+//		items.ShiftBlocksWithPool(blocks, &pool)
+//	}
+func (a *Array[T]) ShiftBlocksWithPool(n int, pool *Pool[T]) bool {
+	if n >= len(a.blocks) {
+		return false
+	}
+
+	if pool != nil {
+		for i := 0; i < n; i++ {
+			pool.put(a.blocks[i].slots)
+		}
+	}
+	a.blocks = a.blocks[n:]
+
+	return true
 }
 
 // Get obtains the value of an entry at a specific offset. Like a Go slice
