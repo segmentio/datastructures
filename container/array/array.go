@@ -147,6 +147,11 @@ func (a *Array[T]) Cap() int {
 	return len(a.blocks) * BlockLen[T]()
 }
 
+// Empty tests if the array contains no entries.
+func (a *Array[T]) Empty() bool {
+	return len(a.blocks) == 0
+}
+
 // Reset removes all entries and releases all blocks into the pool if provided.
 func (a *Array[T]) Reset(pool *Pool[T]) {
 	if pool != nil {

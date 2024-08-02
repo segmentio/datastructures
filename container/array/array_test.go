@@ -153,3 +153,26 @@ func TestPool(t *testing.T) {
 
 	t.Error("no pointers were reused")
 }
+
+func TestEmpty(t *testing.T) {
+	var a Array[int]
+
+	if !a.Empty() {
+		t.Error("should be empty")
+	}
+
+	for i := 0; i < testLen; i++ {
+		a.Push(i)
+		if a.Empty() {
+			t.Error("should not be empty")
+		}
+	}
+
+	for i := 0; i < testLen; i++ {
+		a.Pop()
+	}
+
+	if !a.Empty() {
+		t.Error("should be empty")
+	}
+}
