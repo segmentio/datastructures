@@ -1,5 +1,7 @@
 package array
 
+import "fmt"
+
 // Array works similarly to a Go slice, however the allocation is performed
 // in blocks rather than a single sequential allocation. This means that appends
 // do not need to fully copy prior entries during reallocation, and entries have
@@ -28,7 +30,7 @@ func (a *Array[T]) PushPtr(v *T) {
 
 // PushPtrWithPool appends a value into the array by copying a value from an
 // existing memory address. If a new block needs to be allocated, it will
-// attempt reusing an existing one provided by the pool.
+// attempt to reuse an existing one provided by the pool.
 func (a *Array[T]) PushPtrWithPool(v *T, pool *Pool[T]) {
 	p, _ := a.NextWithPool(pool)
 	*p = *v
@@ -129,6 +131,9 @@ func (a *Array[T]) Get(i int) T {
 // the array. Like a Go slice this results in a panic if the value is outside
 // the array bounds.
 func (a *Array[T]) Ptr(i int) *T {
+	if n := a.Len(); i >= n {
+		panic(fmt.Sprintf("runtime error: index out of range [%d] with length %d", i, n))
+	}
 	size := BlockLen[T]()
 	b, o := i/size, i%size
 	return a.blocks[b].at(o)
@@ -143,12 +148,12 @@ func (a *Array[T]) Len() int {
 	return n
 }
 
-// Cap returns the current capacity of the array without furthur reallocation.
+// Cap returns the current capacity of the array without further reallocation.
 func (a *Array[T]) Cap() int {
 	return len(a.blocks) * BlockLen[T]()
 }
 
-// Empty tests if the array contains no entries.
+// Empty reports whether if the array contains no entries.
 func (a *Array[T]) Empty() bool {
 	return len(a.blocks) == 0
 }

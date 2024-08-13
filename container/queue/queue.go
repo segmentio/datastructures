@@ -14,7 +14,7 @@ func (q *Queue[T]) Len() int {
 	return q.values.Len() - q.index
 }
 
-// Empty tests if the Queue has no entries.
+// Empty reports whether if the queue contains no entries.
 func (q *Queue[T]) Empty() bool {
 	return q.values.Len() == q.index
 }

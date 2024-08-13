@@ -179,3 +179,34 @@ func TestEmpty(t *testing.T) {
 		t.Error("should be empty")
 	}
 }
+
+func TestPanicEmpty(t *testing.T) {
+	defer func() {
+		expect := "runtime error: index out of range [2] with length 0"
+		actual := recover()
+		if expect != actual {
+			t.Errorf("incorrect panic: got=%v, expect=%v", actual, expect)
+		}
+	}()
+
+	var a Array[int]
+	invalid := a.Get(2)
+	t.Errorf("should not be reachable: got=%d", invalid)
+}
+
+func TestPanicOver(t *testing.T) {
+	defer func() {
+		expect := "runtime error: index out of range [2] with length 2"
+		actual := recover()
+		if expect != actual {
+			t.Errorf("incorrect panic: got=%v, expect=%v", actual, expect)
+		}
+	}()
+
+	var a Array[int]
+	a.Push(123)
+	a.Push(456)
+
+	invalid := a.Get(2)
+	t.Errorf("should not be reachable: got=%d", invalid)
+}
