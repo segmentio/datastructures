@@ -210,3 +210,19 @@ func TestPanicOver(t *testing.T) {
 	invalid := a.Get(2)
 	t.Errorf("should not be reachable: got=%d", invalid)
 }
+
+func TestPanicNegative(t *testing.T) {
+	defer func() {
+		expect := "runtime error: index out of range [-1]"
+		actual := recover()
+		if expect != actual {
+			t.Errorf("incorrect panic: got=%v, expect=%v", actual, expect)
+		}
+	}()
+
+	var a Array[int]
+	a.Push(123)
+
+	invalid := a.Get(-1)
+	t.Errorf("should not be reachable: got=%d", invalid)
+}

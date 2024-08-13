@@ -131,6 +131,9 @@ func (a *Array[T]) Get(i int) T {
 // the array. Like a Go slice this results in a panic if the value is outside
 // the array bounds.
 func (a *Array[T]) Ptr(i int) *T {
+	if i < 0 {
+		panic(fmt.Sprintf("runtime error: index out of range [%d]", i))
+	}
 	if n := a.Len(); i >= n {
 		panic(fmt.Sprintf("runtime error: index out of range [%d] with length %d", i, n))
 	}
