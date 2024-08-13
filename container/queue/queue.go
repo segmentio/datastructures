@@ -58,7 +58,7 @@ func (q *Queue[T]) PopWithPool(pool *array.Pool[T]) (v T, ok bool) {
 		v, ok, i = *ptr, true, i+1
 
 		var zero T
-		*ptr = zero // zero out as we go to avoid clear possible memory references
+		*ptr = zero // zero out as we go to avoid possible downstream memory references
 
 		if i == array.BlockLen[T]() {
 			q.values.ShiftBlocksWithPool(1, pool)

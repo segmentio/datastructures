@@ -164,7 +164,7 @@ type IndexHeap[T IndexEntry[T]] []T
 // IndexEntry defines the interface requirement for each entry in a [heap.IndexHeap].
 type IndexEntry[T any] interface {
 	Entry[T]
-	// SetIndex updates the entrie's index position within the heap slice.
+	// SetIndex updates the entry's index position within the heap slice.
 	SetIndex(int)
 }
 

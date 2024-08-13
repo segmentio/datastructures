@@ -47,7 +47,7 @@ func TestQueue(t *testing.T) {
 			t.Error("expected pop to remove value")
 		}
 		if v != at {
-			t.Fatalf("incorrected popped value: expect=%d, got=%d", at, v)
+			t.Fatalf("incorrect popped value: expect=%d, got=%d", at, v)
 		}
 		at += 1
 	}
