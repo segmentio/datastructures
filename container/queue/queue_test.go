@@ -53,7 +53,7 @@ func TestQueue(t *testing.T) {
 	}
 
 	if q.values.Cap() != array.BlockLen[int]() {
-		t.Errorf("capactiy should be one block: expect=%d, got=%d", array.BlockLen[int](), q.values.Cap())
+		t.Errorf("capacity should be one block: expect=%d, got=%d", array.BlockLen[int](), q.values.Cap())
 	}
 
 	for q.Len() > 0 {
@@ -64,7 +64,7 @@ func TestQueue(t *testing.T) {
 			t.Error("expected pop to remove value")
 		}
 		if v != at {
-			t.Fatalf("incorrected popped value: expect=%d, got=%d", at, v)
+			t.Fatalf("incorrect popped value: expect=%d, got=%d", at, v)
 		}
 		at += 1
 	}
@@ -74,6 +74,6 @@ func TestQueue(t *testing.T) {
 	}
 
 	if q.values.Cap() != array.BlockLen[int]() {
-		t.Errorf("capactiy should be one block: expect=%d, got=%d", array.BlockLen[int](), q.values.Cap())
+		t.Errorf("capacity should be one block: expect=%d, got=%d", array.BlockLen[int](), q.values.Cap())
 	}
 }

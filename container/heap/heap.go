@@ -189,7 +189,7 @@ func (h *IndexHeap[T]) Push(x T) {
 	*h = append(*h, x)
 }
 
-// Pop implements [heap.Interface]. This method should not be called directly,w
+// Pop implements [heap.Interface]. This method should not be called directly,
 // use [heap.Pop] instead.
 func (h *IndexHeap[T]) Pop() T {
 	old := *h
