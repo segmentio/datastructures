@@ -55,16 +55,16 @@ func (a *Array[T]) NextWithPool(pool *Pool[T]) (ptr *T, index int) {
 	return
 }
 
-// Pop removes the last item from the array.
-func (a *Array[T]) Pop() {
-	a.PopWithPool(nil)
+// Pop removes the last item from the array and returns the value.
+func (a *Array[T]) Pop() T {
+	return a.PopWithPool(nil)
 }
 
 // PopWithPool removes the last item from the array. If the popped value is the
 // last in a block, the block will be removed and returned to the pool.
-func (a *Array[T]) PopWithPool(pool *Pool[T]) {
+func (a *Array[T]) PopWithPool(pool *Pool[T]) T {
 	i := len(a.blocks) - 1
-	a.blocks[i].pop()
+	v := a.blocks[i].pop()
 
 	if a.blocks[i].len() == 0 {
 		free := a.blocks[i].reset()
@@ -79,6 +79,7 @@ func (a *Array[T]) PopWithPool(pool *Pool[T]) {
 			a.blocks = blocks
 		}
 	}
+	return v
 }
 
 // ShiftBlocks removes `n` number of blocks (`n * BlockLen[T]()` entries) from

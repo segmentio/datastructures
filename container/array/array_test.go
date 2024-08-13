@@ -28,7 +28,10 @@ func TestCapacity(t *testing.T) {
 	}
 
 	for i := 0; i < testLen; i++ {
-		a.Pop()
+		expect := testLen - i - 1
+		if v := a.Pop(); v != expect {
+			t.Errorf("incorrect popped value: got=%d, expect=%d", v, expect)
+		}
 	}
 
 	if a.Len() != 0 {

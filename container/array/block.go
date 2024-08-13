@@ -59,9 +59,11 @@ func (b *block[T]) available() bool { return b.count < cap(b.slots) }
 // pop zeroes out the last entries and decrements the count. We zero the entry
 // so that it allows any pointers to be nil'ed and availble for GC. This also
 // ensures that Next always returns zeroed memory.
-func (b *block[T]) pop() {
+func (b *block[T]) pop() T {
 	i := b.count - 1
 	b.count = i
-	var zero T
-	b.slots[i] = zero
+
+	var v T
+	v, b.slots[i] = b.slots[i], v
+	return v
 }
